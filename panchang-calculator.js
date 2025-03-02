@@ -237,32 +237,91 @@ class PanchangCalculator {
         };
     }
     
- // The following methods need to be updated in panchang-calculator.js to fix the time calculation issues:
+ // =====================================================================
+// FIX FOR panchang-calculator.js
+// =====================================================================
 
 /**
- * Calculate sunrise time using SunCalc with correct timezone conversion
+ * Calculate sunrise time using SunCalc with proper timezone handling
  * @param {Date} date - The date for which sunrise time is needed
- * @returns {Date} - Local sunrise time as Date object
+ * @returns {Date} - Sunrise time as Date object
  */
 calculateSunrise(date) {
-    const times = SunCalc.getTimes(date, this.latitude, this.longitude);
-    // Convert UTC time to local time based on user's location
-    const localSunrise = new Date(times.sunrise.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+    // Create a date object at noon on the selected date to avoid DST issues
+    const localNoonDate = new Date(date);
+    localNoonDate.setHours(12, 0, 0, 0);
+    
+    // Calculate times using SunCalc (returns UTC times)
+    const times = SunCalc.getTimes(localNoonDate, this.latitude, this.longitude);
+    
+    // Get the raw UTC time for sunrise
+    const sunriseUTC = times.sunrise;
+    
+    // Get the timezone offset for the location based on longitude
+    // Each 15 degrees of longitude roughly corresponds to 1 hour timezone difference
+    let timezoneOffset = Math.round(this.longitude / 15);
+    
+    // Handle special cases for well-known regions (optional)
+    // Example for Japan
+    if (this.longitude > 138 && this.longitude < 146 && this.latitude > 30 && this.latitude < 46) {
+        timezoneOffset = 9; // Japan is UTC+9
+    }
+    
+    // Create a new Date object with the correct local time
+    const sunriseHours = sunriseUTC.getUTCHours();
+    const sunriseMinutes = sunriseUTC.getUTCMinutes();
+    const sunriseSeconds = sunriseUTC.getUTCSeconds();
+    
+    // Create a new date with the same date but adjusted hours for the location's timezone
+    const localSunrise = new Date(date);
+    localSunrise.setHours(
+        (sunriseHours + timezoneOffset) % 24,
+        sunriseMinutes,
+        sunriseSeconds
+    );
+    
     return localSunrise;
 }
 
 /**
- * Calculate sunset time using SunCalc with correct timezone conversion
+ * Calculate sunset time using SunCalc with proper timezone handling
  * @param {Date} date - The date for which sunset time is needed
- * @returns {Date} - Local sunset time as Date object
+ * @returns {Date} - Sunset time as Date object
  */
 calculateSunset(date) {
-    const times = SunCalc.getTimes(date, this.latitude, this.longitude);
-    // Convert UTC time to local time based on user's location
-    const localSunset = new Date(times.sunset.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+    // Create a date object at noon on the selected date to avoid DST issues
+    const localNoonDate = new Date(date);
+    localNoonDate.setHours(12, 0, 0, 0);
+    
+    // Calculate times using SunCalc (returns UTC times)
+    const times = SunCalc.getTimes(localNoonDate, this.latitude, this.longitude);
+    
+    // Get the raw UTC time for sunset
+    const sunsetUTC = times.sunset;
+    
+    // Get the timezone offset for the location based on longitude
+    let timezoneOffset = Math.round(this.longitude / 15);
+    
+    // Handle special cases for well-known regions (optional)
+    if (this.longitude > 138 && this.longitude < 146 && this.latitude > 30 && this.latitude < 46) {
+        timezoneOffset = 9; // Japan is UTC+9
+    }
+    
+    // Create a new Date object with the correct local time
+    const sunsetHours = sunsetUTC.getUTCHours();
+    const sunsetMinutes = sunsetUTC.getUTCMinutes();
+    const sunsetSeconds = sunsetUTC.getUTCSeconds();
+    
+    // Create a new date with the same date but adjusted hours for the location's timezone
+    const localSunset = new Date(date);
+    localSunset.setHours(
+        (sunsetHours + timezoneOffset) % 24,
+        sunsetMinutes,
+        sunsetSeconds
+    );
+    
     return localSunset;
 }
- 
 
     
     /**

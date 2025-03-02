@@ -73,6 +73,8 @@ function updatePanchangData() {
 
 // Function to update sunrise, sunset and related times
 // Function to update sunrise, sunset, and related times dynamically
+// Function to update sunrise, sunset, and related times dynamically
+// Function to update sunrise, sunset, and related times dynamically
 function updateAstronomicalTimes() {
     if (!window.SunCalc) {
         console.error("SunCalc library not loaded.");
@@ -83,27 +85,69 @@ function updateAstronomicalTimes() {
     const lat = parseFloat(localStorage.getItem('panchang-latitude')) || 35.6768601; // Default to Tokyo
     const lng = parseFloat(localStorage.getItem('panchang-longitude')) || 139.7638947; // Default to Tokyo
 
+    // Create a date object at noon today to avoid DST issues
     const today = new Date();
-    const times = SunCalc.getTimes(today, lat, lng);
+    const localNoonDate = new Date(today);
+    localNoonDate.setHours(12, 0, 0, 0);
+    
+    // Calculate times using SunCalc (returns UTC times)
+    const times = SunCalc.getTimes(localNoonDate, lat, lng);
+    
+    // Get the timezone offset for the location based on longitude
+    let timezoneOffset = Math.round(lng / 15);
+    
+    // Handle special cases for well-known regions (optional)
+    if (lng > 138 && lng < 146 && lat > 30 && lat < 46) {
+        timezoneOffset = 9; // Japan is UTC+9
+    }
+    
+    // Process sunrise time
+    const sunriseHours = times.sunrise.getUTCHours();
+    const sunriseMinutes = times.sunrise.getUTCMinutes();
+    const sunriseLocal = new Date(today);
+    sunriseLocal.setHours(
+        (sunriseHours + timezoneOffset) % 24,
+        sunriseMinutes,
+        0
+    );
+    
+    // Process sunset time
+    const sunsetHours = times.sunset.getUTCHours();
+    const sunsetMinutes = times.sunset.getUTCMinutes();
+    const sunsetLocal = new Date(today);
+    sunsetLocal.setHours(
+        (sunsetHours + timezoneOffset) % 24,
+        sunsetMinutes,
+        0
+    );
 
-    // Convert UTC times to local time
-    const sunriseTime = new Date(times.sunrise.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-    const sunsetTime = new Date(times.sunset.toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
-
-    // Display formatted time in local time zone
-    document.querySelector('.date-item:nth-child(4) span').textContent = formatTime(sunriseTime);
-    document.querySelector('.date-item:nth-child(5) span').textContent = formatTime(sunsetTime);
+    // Display formatted time
+    document.querySelector('.date-item:nth-child(4) span').textContent = formatTime(sunriseLocal);
+    document.querySelector('.date-item:nth-child(5) span').textContent = formatTime(sunsetLocal);
 }
 
+// =====================================================================
+// HELPER FUNCTION FOR main-integration.js
+// =====================================================================
 
-
-// Helper function to format time
+/**
+ * Helper function to format time properly
+ * @param {Date} date - Date object
+ * @returns {String} Formatted time string (e.g., "6:45 AM")
+ */
 function formatTime(date) {
-    return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
-    });
+    if (!date) return "N/A";
+    
+    // For consistent display, use a simple formatting approach
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    
+    // Convert to 12-hour format
+    hours = hours % 12;
+    hours = hours ? hours : 12; // Convert 0 to 12
+    
+    return `${hours}:${minutes} ${period}`;
 }
 
 // Function to update the panchang table
